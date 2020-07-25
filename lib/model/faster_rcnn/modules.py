@@ -42,6 +42,7 @@ class CEM(nn.Module):
         self._initialize_weights()
     def forward(self,inputs):
 
+
         if self.feat_stride == 8:
             C3_lat = self.conv3(inputs[0])
             C4_lat = self.conv4(inputs[1])
@@ -50,6 +51,14 @@ class CEM(nn.Module):
             C5_lat = F.interpolate(C5_lat, size=[C3_lat.size(2), C3_lat.size(3)], mode="nearest")
             C6_lat = self.convlast(inputs[3])
             out =   C3_lat +  C4_lat + C5_lat + C6_lat
+
+        """
+        其中C4来自backbone的Stage3，C5来自backbone的Stage4,C5 2倍的上采样。
+        构造了一个多尺度的特征金字塔，然后三个层相加，完成特征的优化。
+        一般的Global Avg pool以后实际上得到了一个通道的Attention,只不过SENet是相乘，而这里直接相加。
+        总体来说这个模块构造的很好，以比较小的计算代价扩大了感受野，提供了多尺度特征。
+        同时也有一些地方需要商量，比如是SENet中的乘法更适合呢？还是直接相加更适合？
+        """
         else:
             C4_lat = self.conv4(inputs[0])
 
@@ -213,6 +222,7 @@ class SAM(torch.nn.Module):
         self.conv1 = nn.Conv2d(f_channels, CEM_FILTER, kernel_size=1)
         self.bn = nn.BatchNorm2d(CEM_FILTER)
         self._initialize_weights()
+        
     def forward(self, input):
 
         cem = input[0]
@@ -264,6 +274,12 @@ class ShuffleV2Block(nn.Module):
 
         outputs = oup - inp
 
+        """
+        pointwise 1*1, depthwise 5*5的组卷积，pointwise 1*1,ReLU
+        
+        如果是stride为2
+        depthwise 5*5,stride为2的组卷积，pointwise 1*1,ReLU
+        """
         branch_main = [
             # pw
             nn.Conv2d(inp, mid_channels, 1, 1, 0, bias=False),

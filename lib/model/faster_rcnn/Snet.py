@@ -49,6 +49,9 @@ class SnetExtractor(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         self._initialize_weights()
 
+    """
+    num_layers: 4,8,4 代表stage2有4个卷积层，stage3有8个卷积层，stage4有4个卷积层    
+    """
     def _make_layer(self, num_layers, in_channels, out_channels, **kwargs):
         layers = []
         for i in range(num_layers):
@@ -134,6 +137,7 @@ class SnetExtractor(nn.Module):
         c3 = self.stage1(x)
         c4 = self.stage2(c3)
         c5 = self.stage3(c4)
+        # 如果是49层的模型，会有conv5
         if len(self.channels) == 5:
             c5 = self.conv5(c5)
 
